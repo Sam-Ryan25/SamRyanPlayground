@@ -20,20 +20,12 @@
 
   <!-- Or insert inline script -->
   <!-- Example chatbot script -->
-  <script>
-    // Replace with your actual chatbot code
-    window.onload = function () {
-      const bot = document.createElement('div');
-      bot.textContent = "🤖 Hello! I'm Arto, your assistant.";
-      bot.style.position = "fixed";
-      bot.style.bottom = "20px";
-      bot.style.right = "20px";
-      bot.style.background = "#f1f1f1";
-      bot.style.padding = "15px";
-      bot.style.borderRadius = "10px";
-      bot.style.boxShadow = "0 4px 6px rgba(0,0,0,0.1)";
-      document.body.appendChild(bot);
-    };
-  </script>
+  <script type="module">
+  import Arto from "https://assets.arto.chat/arto.js";
+
+  Arto.init({
+    uuid: "70cdc8d1-b294-4cfa-a448-927978bedb67",
+  });
+</script>
 </body>
 </html>
