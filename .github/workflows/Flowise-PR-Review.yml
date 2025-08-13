@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Send PR details to Flowise Agent
         run: |
-          curl -X POST https://flowiseai-inv-u36837.vm.elestio.app/api/v1/prediction/94d33dc7-b711-4508-97d9-c6ce88418f73 \
+          curl -X POST https://flowiseai-inv-u36837.vm.elestio.app/api/v1/prediction/e7cf97b0-fbd7-4975-87d0-832ae6853acc \
             -H "Content-Type: application/json" \
             -d "$(jq -n \
               --arg repo "${{ github.repository }}" \
