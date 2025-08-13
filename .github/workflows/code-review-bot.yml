@@ -3,7 +3,7 @@ on:
     types: [created]
 jobs:
   run-assistant:
-    if: github.event.issue.pull_request && contains(github.event.comment.body, '@Arto review this')
+    if: github.event.issue.pull_request && contains(github.event.comment.body, 'review this')
     runs-on: ubuntu-latest
     steps:
       - name: Call Flowise Agent
