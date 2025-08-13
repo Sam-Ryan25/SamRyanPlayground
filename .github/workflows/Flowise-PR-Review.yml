@@ -1,0 +1,21 @@
+name: Flowise PR Review
+
+on:
+  issue_comment:
+    types: [created]
+
+jobs:
+  review-pr:
+    if: github.event.issue.pull_request && contains(github.event.comment.body, 'review this')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Send PR details to Flowise Agent
+        run: |
+          curl -X POST https://your-flowise-agent-endpoint \
+            -H "Content-Type: application/json" \
+            -d "$(jq -n \
+              --arg repo "${{ github.repository }}" \
+              --arg pr_number "${{ github.event.issue.number }}" \
+              --arg comment "${{ github.event.comment.body }}" \
+              '{repo: $repo, pr_number: $pr_number, comment: $comment}')"
