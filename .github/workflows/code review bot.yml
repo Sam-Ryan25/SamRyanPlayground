@@ -1,0 +1,17 @@
+on:
+  issue_comment:
+    types: [created]
+jobs:
+  run-assistant:
+    if: github.event.issue.pull_request && contains(github.event.comment.body, '@Arto review this')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Call Flowise Agent
+        run: |
+          curl -X POST https://your-flowise-agent-endpoint \
+               -H "Content-Type: application/json" \
+               -d '{
+                     "pr_number": "${{ github.event.issue.number }}",
+                     "repo": "${{ github.repository }}",
+                     "comment": "${{ github.event.comment.body }}"
+                   }'
