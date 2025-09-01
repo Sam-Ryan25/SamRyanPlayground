@@ -39,7 +39,7 @@ jobs:
           let content = process.env.RELEASE_BODY || '';
           const title = process.env.RELEASE_TITLE || 'New Release';
 
-          // Optional: remove unwanted sections
+          // Remove unwanted sections
           content = content.replace(/## Contributors[\s\S]*/g, '');
 
           // Convert Markdown → HTML
