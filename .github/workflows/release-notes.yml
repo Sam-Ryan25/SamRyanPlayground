@@ -1,0 +1,68 @@
+name: Publish Release Notes to WordPress
+
+on:
+  release:
+    types: [published]
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install marked axios
+
+      - name: Publish release notes to WordPress (Draft)
+        env:
+          WP_URL: ${{ secrets.WP_URL }}         # Your site URL, e.g., https://example.com
+          WP_USER: ${{ secrets.WP_USER }}       # WordPress username or application password user
+          WP_PASS: ${{ secrets.WP_PASS }}       # WordPress application password
+          RELEASE_TITLE: ${{ github.event.release.name }}
+          RELEASE_BODY: ${{ github.event.release.body }}
+        run: |
+          node <<'EOF'
+          const axios = require('axios');
+          const marked = require('marked');
+
+          // Get environment variables
+          const wpUrl = process.env.WP_URL;
+          const user = process.env.WP_USER;
+          const pass = process.env.WP_PASS;
+          let content = process.env.RELEASE_BODY || '';
+          const title = process.env.RELEASE_TITLE || 'New Release';
+
+          // Optional: remove unwanted sections
+          content = content.replace(/## Contributors[\s\S]*/g, '');
+
+          // Convert Markdown → HTML
+          const htmlContent = marked.parse(content);
+
+          // Post to WordPress as a draft
+          axios.post(
+            `${wpUrl}/wp-json/wp/v2/posts`,
+            {
+              title: title,
+              content: htmlContent,
+              status: 'draft'  // <-- posts start as draft
+            },
+            {
+              auth: {
+                username: user,
+                password: pass
+              }
+            }
+          )
+          .then(() => console.log('✅ Release notes saved as draft in WordPress!'))
+          .catch(err => {
+            console.error('❌ Failed to save release notes:', err.response?.data || err);
+            process.exit(1);
+          });
+          EOF
