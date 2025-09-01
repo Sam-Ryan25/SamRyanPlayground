@@ -22,8 +22,8 @@ jobs:
 
       - name: Publish release notes to WordPress (Draft)
         env:
-          WP_URL: ${{ secrets.WP_URL }}         # Your site URL, e.g., https://example.com
-          WP_USER: ${{ secrets.WP_USER }}       # WordPress username or application password user
+          WP_URL: ${{ secrets.WP_URL }}         # WordPress site URL
+          WP_USER: ${{ secrets.WP_USER }}       # WordPress username or app password
           WP_PASS: ${{ secrets.WP_PASS }}       # WordPress application password
           RELEASE_TITLE: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
@@ -32,37 +32,41 @@ jobs:
           const axios = require('axios');
           const marked = require('marked');
 
-          // Get environment variables
           const wpUrl = process.env.WP_URL;
           const user = process.env.WP_USER;
           const pass = process.env.WP_PASS;
-          let content = process.env.RELEASE_BODY || '';
           const title = process.env.RELEASE_TITLE || 'New Release';
+          let content = process.env.RELEASE_BODY || '';
 
-          // Remove unwanted sections
-          content = content.replace(/## Contributors[\s\S]*/g, '');
+          // Remove "New Contributors" section and "Full Changelog" link
+          content = content.replace(/## New Contributors[\s\S]*/g, '');
+          content = content.replace(/Full Changelog:.*$/gm, '');
 
-          // Convert Markdown → HTML
-          const htmlContent = marked.parse(content);
+          // Remove GitHub username mentions and PR links
+          content = content.replace(/ by @\S+/g, '');                 // Remove usernames
+          content = content.replace(/https:\/\/github\.com\/\S+/g, ''); // Remove links
 
-          // Post to WordPress as a draft
+          // Trim lines and remove empty lines
+          const lines = content.split('\n').map(line => line.trim()).filter(Boolean);
+
+          // Convert to bullet list in HTML
+          const htmlContent = `<ul>\n${lines.map(line => `<li>${line}</li>`).join('\n')}\n</ul>`;
+
+          // Post to WordPress as draft
           axios.post(
             `${wpUrl}/wp-json/wp/v2/posts`,
             {
-              title: title,
+              title,
               content: htmlContent,
-              status: 'draft'  // <-- posts start as draft
+              status: 'draft'
             },
             {
-              auth: {
-                username: user,
-                password: pass
-              }
+              auth: { username: user, password: pass }
             }
           )
           .then(() => console.log('✅ Release notes saved as draft in WordPress!'))
           .catch(err => {
-            console.error('❌ Failed to save release notes:', err.response?.data || err);
+            console.error('❌ Failed to save release notes:', err.response?.data || err.message || err);
             process.exit(1);
           });
           EOF
