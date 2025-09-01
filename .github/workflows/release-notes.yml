@@ -22,9 +22,9 @@ jobs:
 
       - name: Publish release notes to WordPress (Draft)
         env:
-          WP_URL: ${{ secrets.WP_URL }}         # WordPress site URL
-          WP_USER: ${{ secrets.WP_USER }}       # WordPress username or app password
-          WP_PASS: ${{ secrets.WP_PASS }}       # WordPress application password
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_PASS: ${{ secrets.WP_PASS }}
           RELEASE_TITLE: ${{ github.event.release.name }}
           RELEASE_BODY: ${{ github.event.release.body }}
         run: |
@@ -38,19 +38,19 @@ jobs:
           const title = process.env.RELEASE_TITLE || 'New Release';
           let content = process.env.RELEASE_BODY || '';
 
-          // Remove "New Contributors" section and "Full Changelog" link
+          // Remove "New Contributors" section and "Full Changelog" line
           content = content.replace(/## New Contributors[\s\S]*/g, '');
           content = content.replace(/Full Changelog:.*$/gm, '');
 
           // Remove GitHub username mentions and PR links
-          content = content.replace(/ by @\S+/g, '');                 // Remove usernames
-          content = content.replace(/https:\/\/github\.com\/\S+/g, ''); // Remove links
+          content = content.replace(/ by @\S+/g, '');
+          content = content.replace(/https:\/\/github\.com\/\S+/g, '');
 
           // Trim lines and remove empty lines
           const lines = content.split('\n').map(line => line.trim()).filter(Boolean);
 
-          // Convert to bullet list in HTML
-          const htmlContent = `<ul>\n${lines.map(line => `<li>${line}</li>`).join('\n')}\n</ul>`;
+          // Convert to HTML with heading and bullet list
+          const htmlContent = `<h2>What's Changed</h2>\n<ul>\n${lines.map(line => `<li>${line}</li>`).join('\n')}\n</ul>`;
 
           // Post to WordPress as draft
           axios.post(
