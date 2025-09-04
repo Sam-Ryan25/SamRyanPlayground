@@ -1,0 +1,105 @@
+name: Publish Aggregated Release Notes to WordPress
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of days back to include releases"
+        required: false
+        default: "30"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm install axios
+
+      - name: Collect and Publish Notes
+        env:
+          WP_URL: ${{ secrets.WP_URL }}   # WordPress site URL
+          WP_USER: ${{ secrets.WP_USER }} # WordPress username or app password
+          WP_PASS: ${{ secrets.WP_PASS }} # WordPress application password
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DAYS: ${{ github.event.inputs.days }}
+        run: |
+          node <<'EOF'
+          const axios = require('axios');
+
+          const wpUrl = process.env.WP_URL;
+          const user = process.env.WP_USER;
+          const pass = process.env.WP_PASS;
+          const days = parseInt(process.env.DAYS || "30", 10);
+          const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+          async function run() {
+            // Fetch releases from GitHub
+            const releases = await axios.get(
+              "https://api.github.com/repos/${{ github.repository }}/releases",
+              { headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } }
+            );
+
+            // Filter releases in timeframe
+            const recent = releases.data.filter(r => new Date(r.published_at) >= cutoff);
+
+            if (!recent.length) {
+              console.log("ℹ️ No releases found in timeframe.");
+              return;
+            }
+
+            let combinedContent = "";
+            for (const r of recent) {
+              let content = r.body || "";
+
+              // --- Same cleaning rules you already use ---
+              content = content.replace(/## What's Changed/g, '');
+              content = content.replace(/## New Contributors[\\s\\S]*/g, '');
+              content = content.replace(/Full Changelog:.*$/gm, '');
+              content = content.replace(/ by @\\S+/g, '');
+              content = content.replace(/https:\\/\\/github\\.com\\/\\S+/g, '');
+
+              // Split into lines, trim, remove empties
+              const lines = content.split('\n').map(line => line.trim()).filter(Boolean);
+
+              // Wrap each release in its own section
+              const section = `
+                <h2>${r.name || r.tag_name} (${r.published_at.slice(0,10)})</h2>
+                <h3>What's Changed</h3>
+                <ul>
+                  ${lines.map(line => `<li>${line}</li>`).join('\n')}
+                </ul>
+              `;
+
+              combinedContent += section + "\n";
+            }
+
+            // Post aggregated notes to WordPress as draft
+            await axios.post(
+              `${wpUrl}/wp-json/wp/v2/posts`,
+              {
+                title: `Release Notes (Last ${days} Days)`,
+                content: combinedContent,
+                status: "draft"
+              },
+              {
+                auth: { username: user, password: pass }
+              }
+            );
+
+            console.log("✅ Aggregated release notes saved as draft in WordPress!");
+          }
+
+          run().catch(err => {
+            console.error("❌ Failed:", err.response?.data || err.message || err);
+            process.exit(1);
+          });
+          EOF
