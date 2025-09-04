@@ -1,4 +1,4 @@
-name: Release notes summary with llm 
+name: Release notes summary with llm
 
 on:
   workflow_dispatch:
@@ -26,17 +26,17 @@ jobs:
 
       - name: Collect, Clean, and Publish Notes
         env:
-          WP_URL: ${{ secrets.WP_URL }}          # WordPress site URL
-          WP_USER: ${{ secrets.WP_USER }}        # WordPress username or app password
-          WP_PASS: ${{ secrets.WP_PASS }}        # WordPress application password
+          WP_URL: ${{ secrets.WP_URL }}
+          WP_USER: ${{ secrets.WP_USER }}
+          WP_PASS: ${{ secrets.WP_PASS }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }} # <- your OpenAI key stored in repo secrets
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           DAYS: ${{ github.event.inputs.days }}
         run: |
           node <<'EOF'
           const axios = require('axios');
-          const { Configuration, OpenAIApi } = require('openai');
-
+          const OpenAI = require('openai');
+          
           const wpUrl = process.env.WP_URL;
           const user = process.env.WP_USER;
           const pass = process.env.WP_PASS;
@@ -56,8 +56,7 @@ jobs:
               return;
             }
 
-            const configuration = new Configuration({ apiKey: process.env.OPENAI_API_KEY });
-            const openai = new OpenAIApi(configuration);
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
             let combinedContent = "";
 
@@ -77,7 +76,7 @@ jobs:
               if (lines.length > 0) {
                 console.log(`🤖 Sending ${lines.length} bullet points to LLM for cleanup...`);
 
-                const response = await openai.createChatCompletion({
+                const response = await openai.chat.completions.create({
                   model: "gpt-4o-mini",
                   messages: [
                     {
@@ -90,7 +89,7 @@ jobs:
                   max_tokens: 1000,
                 });
 
-                const cleanedBullets = response.data.choices[0].message.content
+                const cleanedBullets = response.choices[0].message.content
                   .split("\n")
                   .map(l => l.trim())
                   .filter(Boolean);
