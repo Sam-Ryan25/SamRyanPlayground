@@ -1,4 +1,4 @@
-name: Publish Aggregated Release Notes to WordPress
+name: Release notes summary
 
 on:
   workflow_dispatch:
@@ -60,12 +60,12 @@ jobs:
             for (const r of recent) {
               let content = r.body || "";
 
-              // --- Same cleaning rules you already use ---
+              // --- Cleaning rules (fixed regex) ---
               content = content.replace(/## What's Changed/g, '');
-              content = content.replace(/## New Contributors[\\s\\S]*/g, '');
+              content = content.replace(/## New Contributors[\s\S]*/g, '');
               content = content.replace(/Full Changelog:.*$/gm, '');
-              content = content.replace(/ by @\\S+/g, '');
-              content = content.replace(/https:\\/\\/github\\.com\\/\\S+/g, '');
+              content = content.replace(/ by @\S+/g, '');
+              content = content.replace(/https:\/\/github\.com\/\S+/g, '');
 
               // Split into lines, trim, remove empties
               const lines = content.split('\n').map(line => line.trim()).filter(Boolean);
