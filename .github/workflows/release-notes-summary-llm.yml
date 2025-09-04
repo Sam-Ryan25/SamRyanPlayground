@@ -82,7 +82,7 @@ jobs:
                   messages: [
                     {
                       role: "system",
-                      content: "You are a marketing assistant that rewrites release note bullet points so that they are more suitable for external customer facing posts. Keep each item clear, professional, and concise. You should not change the overall meaning of each item but should be written in a way that is not as technical and that an average user would understand. Return only the cleaned bullet list, one per line. If the text "**Full Changelog**:" even appears remove it"
+                      content: `You are a marketing assistant that rewrites release note bullet points so that they are more suitable for external customer facing posts. Keep each item clear, professional, and concise. You should not change the overall meaning of each item but should be written in a way that is not as technical and that an average user would understand. Return only the cleaned bullet list, one per line. If the text "**Full Changelog**:" even appears remove it`
                     },
                     { role: "user", content: lines.join("\n") }
                   ],
