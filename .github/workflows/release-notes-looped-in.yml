@@ -1,4 +1,4 @@
-name: Release notes to Zapier
+name: Release notes looped in
 
 on:
   workflow_dispatch:
@@ -24,12 +24,13 @@ jobs:
       - name: Install dependencies
         run: npm install axios openai
 
-      - name: Collect, Clean, and Send Notes to Zapier
+      - name: Collect, Clean, and Publish Notes to LoopedIn
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          LOOPEDIN_API_KEY: ${{ secrets.LOOPEDIN_API_KEY }}
+          LOOPEDIN_WORKSPACE_ID: ${{ secrets.LOOPEDIN_WORKSPACE_ID }}
           DAYS: ${{ github.event.inputs.days }}
-          ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
         run: |
           node <<'EOF'
           const axios = require('axios');
@@ -37,7 +38,8 @@ jobs:
 
           const days = parseInt(process.env.DAYS || "30", 10);
           const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-          const webhookUrl = process.env.ZAPIER_WEBHOOK_URL;
+          const loopedinApiKey = process.env.LOOPEDIN_API_KEY;
+          const workspaceId = process.env.LOOPEDIN_WORKSPACE_ID;
 
           async function run() {
             console.log("📦 Fetching GitHub releases...");
@@ -68,7 +70,7 @@ jobs:
               let lines = content.split('\n').map(l => l.trim()).filter(Boolean);
               if (!lines.length) continue;
 
-              console.log(`🤖 Sending ${lines.length} bullets to OpenAI...`);
+              console.log(`🤖 Sending ${lines.length} bullets to OpenAI for cleanup...`);
 
               const response = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
@@ -88,23 +90,34 @@ jobs:
                 .map(l => l.trim())
                 .filter(Boolean);
 
-              const section = {
-                title: r.name || r.tag_name,
-                date: r.published_at.slice(0,10),
-                bullets: cleaned
-              };
-
-              combinedContent += JSON.stringify(section) + "\n";
+              const section = `
+                <h2>${r.name || r.tag_name} (${r.published_at.slice(0,10)})</h2>
+                <ul>${cleaned.map(line => `<li>${line}</li>`).join('\n')}</ul>
+              `;
+              combinedContent += section + "\n";
             }
 
-            console.log("📝 Sending cleaned release notes to Zapier...");
-            await axios.post(webhookUrl, {
-              workspace: "${{ secrets.LOOPEDIN_WORKSPACE_ID }}",
-              title: `Release Notes (Last ${days} Days)`,
-              content: combinedContent
-            });
+            console.log("🚀 Sending release notes to LoopedIn as a draft...");
 
-            console.log("✅ Sent to Zapier successfully!");
+            const title = `Release Notes (Last ${days} Days)`;
+
+            await axios.post(
+              `https://api.loopedin.io/v1/workspaces/${workspaceId}/posts`,
+              {
+                title,
+                content: combinedContent,
+                visibility: "public",
+                status: "draft" // ✅ draft mode
+              },
+              {
+                headers: {
+                  Authorization: `Bearer ${loopedinApiKey}`,
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            console.log("✅ Release notes saved as a DRAFT in LoopedIn!");
           }
 
           run().catch(err => {
