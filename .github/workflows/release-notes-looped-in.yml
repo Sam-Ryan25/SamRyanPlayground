@@ -97,7 +97,7 @@ jobs:
               combinedContent += section + "\n";
             }
 
-            console.log("🚀 Publishing to LoopedIn...");
+            console.log("🚀 Sending release notes to LoopedIn as a draft...");
 
             const title = `Release Notes (Last ${days} Days)`;
 
@@ -107,7 +107,7 @@ jobs:
                 title,
                 content: combinedContent,
                 visibility: "public",
-                status: "published" // change to "draft" if you prefer review first
+                status: "draft" // ✅ draft mode
               },
               {
                 headers: {
@@ -117,7 +117,7 @@ jobs:
               }
             );
 
-            console.log("✅ Release notes published to LoopedIn!");
+            console.log("✅ Release notes saved as a DRAFT in LoopedIn!");
           }
 
           run().catch(err => {
