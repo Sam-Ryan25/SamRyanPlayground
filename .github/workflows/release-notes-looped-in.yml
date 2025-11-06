@@ -1,4 +1,4 @@
-name: Release notes looped in
+name: Release notes to Zapier
 
 on:
   workflow_dispatch:
@@ -24,13 +24,12 @@ jobs:
       - name: Install dependencies
         run: npm install axios openai
 
-      - name: Collect, Clean, and Publish Notes to LoopedIn
+      - name: Collect, Clean, and Send Notes to Zapier
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
-          LOOPEDIN_API_KEY: ${{ secrets.LOOPEDIN_API_KEY }}
-          LOOPEDIN_WORKSPACE_ID: ${{ secrets.LOOPEDIN_WORKSPACE_ID }}
           DAYS: ${{ github.event.inputs.days }}
+          ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
         run: |
           node <<'EOF'
           const axios = require('axios');
@@ -38,24 +37,16 @@ jobs:
 
           const days = parseInt(process.env.DAYS || "30", 10);
           const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-          const loopedinApiKey = process.env.LOOPEDIN_API_KEY;
-          const workspaceId = process.env.LOOPEDIN_WORKSPACE_ID;
+          const webhookUrl = process.env.ZAPIER_WEBHOOK_URL;
 
           async function run() {
             console.log("📦 Fetching GitHub releases...");
-            console.log("Repository:", "${{ github.repository }}");
-            console.log("Cutoff date:", cutoff.toISOString());
-
             const releases = await axios.get(
               "https://api.github.com/repos/${{ github.repository }}/releases",
               { headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } }
             );
 
-            console.log("✅ Total releases found:", releases.data.length);
-
             const recent = releases.data.filter(r => new Date(r.published_at) >= cutoff);
-            console.log("✅ Releases within cutoff:", recent.length);
-
             if (!recent.length) {
               console.log("ℹ️ No recent releases found in timeframe.");
               return;
@@ -66,9 +57,8 @@ jobs:
 
             for (const r of recent) {
               let content = r.body || "";
-              console.log(`🧩 Processing release: ${r.name || r.tag_name}`);
 
-              // Clean release notes
+              // --- Clean release notes ---
               content = content.replace(/## What's Changed/g, '');
               content = content.replace(/## New Contributors[\s\S]*/g, '');
               content = content.replace(/Full Changelog:.*$/gm, '');
@@ -76,14 +66,10 @@ jobs:
               content = content.replace(/https:\/\/github\.com\/\S+/g, '');
 
               let lines = content.split('\n').map(l => l.trim()).filter(Boolean);
-              console.log(`  • Lines after cleaning: ${lines.length}`);
+              if (!lines.length) continue;
 
-              if (!lines.length) {
-                console.log("  ❌ No valid lines, skipping release.");
-                continue;
-              }
+              console.log(`🤖 Sending ${lines.length} bullets to OpenAI...`);
 
-              console.log("🤖 Sending to OpenAI...");
               const response = await openai.chat.completions.create({
                 model: "gpt-4o-mini",
                 messages: [
@@ -97,66 +83,32 @@ jobs:
                 max_tokens: 1000,
               });
 
-              console.log("✅ OpenAI completed.");
-
               const cleaned = response.choices[0].message.content
                 .split("\n")
                 .map(l => l.trim())
                 .filter(Boolean);
 
-              console.log(`  • Cleaned bullets: ${cleaned.length}`);
+              const section = {
+                title: r.name || r.tag_name,
+                date: r.published_at.slice(0,10),
+                bullets: cleaned
+              };
 
-              const section = `
-                <h2>${r.name || r.tag_name} (${r.published_at.slice(0,10)})</h2>
-                <ul>${cleaned.map(line => `<li>${line}</li>`).join('\n')}</ul>
-              `;
-              combinedContent += section + "\n";
+              combinedContent += JSON.stringify(section) + "\n";
             }
 
-            console.log("📝 Final combined content length:", combinedContent.length);
+            console.log("📝 Sending cleaned release notes to Zapier...");
+            await axios.post(webhookUrl, {
+              workspace: "${{ secrets.LOOPEDIN_WORKSPACE_ID }}",
+              title: `Release Notes (Last ${days} Days)`,
+              content: combinedContent
+            });
 
-            const title = `Release Notes (Last ${days} Days)`;
-            console.log("🚀 Sending to LoopedIn as draft...");
-            console.log("Workspace:", workspaceId);
-
-            try {
-              const res = await axios.post(
-                `https://api.loopedin.io/v1/workspaces/${workspaceId}/posts`,
-                {
-                  title,
-                  content: combinedContent,
-                  visibility: "public",
-                  status: "draft"
-                },
-                {
-                  headers: {
-                    Authorization: `Bearer ${loopedinApiKey}`,
-                    "Content-Type": "application/json",
-                      "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) Node.js",
-                  },
-                  validateStatus: () => true, // don't throw automatically
-                }
-              );
-
-              console.log("📡 LoopedIn response status:", res.status);
-
-              if (res.status >= 200 && res.status < 300) {
-                console.log("✅ Draft created successfully in LoopedIn!");
-              } else {
-                console.error("❌ LoopedIn returned an error:");
-                console.error("Status:", res.status);
-                console.error("Body:", res.data);
-                process.exit(1);
-              }
-            } catch (err) {
-              console.error("❌ Request failed before reaching LoopedIn API:");
-              console.error(err);
-              process.exit(1);
-            }
+            console.log("✅ Sent to Zapier successfully!");
           }
 
           run().catch(err => {
-            console.error("❌ Uncaught failure:", err.response?.status, err.response?.data || err.message || err);
+            console.error("❌ Failed:", err.response?.data || err.message || err);
             process.exit(1);
           });
           EOF
