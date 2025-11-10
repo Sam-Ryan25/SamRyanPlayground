@@ -1,4 +1,4 @@
-name: Release notes summary with llm
+name: Release notes summary with llm (LoopedIn)
 
 on:
   workflow_dispatch:
