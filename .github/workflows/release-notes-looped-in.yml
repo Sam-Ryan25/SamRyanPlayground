@@ -1,4 +1,4 @@
-name: Release notes looped in
+name: Release notes summary with llm
 
 on:
   workflow_dispatch:
@@ -38,17 +38,20 @@ jobs:
 
           const days = parseInt(process.env.DAYS || "30", 10);
           const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
-          const loopedinApiKey = process.env.LOOPEDIN_API_KEY;
+
           const workspaceId = process.env.LOOPEDIN_WORKSPACE_ID;
+          const loopedinApiKey = process.env.LOOPEDIN_API_KEY;
 
           async function run() {
             console.log("📦 Fetching GitHub releases...");
+
             const releases = await axios.get(
               "https://api.github.com/repos/${{ github.repository }}/releases",
               { headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } }
             );
 
             const recent = releases.data.filter(r => new Date(r.published_at) >= cutoff);
+
             if (!recent.length) {
               console.log("ℹ️ No recent releases found in timeframe.");
               return;
@@ -60,7 +63,6 @@ jobs:
             for (const r of recent) {
               let content = r.body || "";
 
-              // --- Clean release notes ---
               content = content.replace(/## What's Changed/g, '');
               content = content.replace(/## New Contributors[\s\S]*/g, '');
               content = content.replace(/Full Changelog:.*$/gm, '');
@@ -94,20 +96,21 @@ jobs:
                 <h2>${r.name || r.tag_name} (${r.published_at.slice(0,10)})</h2>
                 <ul>${cleaned.map(line => `<li>${line}</li>`).join('\n')}</ul>
               `;
+
               combinedContent += section + "\n";
             }
 
-            console.log("🚀 Sending release notes to LoopedIn as a draft...");
+            console.log("🚀 Publishing to LoopedIn...");
 
             const title = `Release Notes (Last ${days} Days)`;
 
             await axios.post(
-              `https://api.loopedin.io/v1/workspaces/${workspaceId}/posts`,
+              `https://api.loopedin.io/v1/workspaces/${workspaceId}/updates`,
               {
                 title,
-                content: combinedContent,
+                body: combinedContent,
                 visibility: "public",
-                status: "draft" // ✅ draft mode
+                status: "published"
               },
               {
                 headers: {
@@ -117,7 +120,7 @@ jobs:
               }
             );
 
-            console.log("✅ Release notes saved as a DRAFT in LoopedIn!");
+            console.log("✅ Release notes published to LoopedIn!");
           }
 
           run().catch(err => {
