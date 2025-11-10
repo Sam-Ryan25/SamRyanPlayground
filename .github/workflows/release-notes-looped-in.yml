@@ -114,7 +114,7 @@ jobs:
               },
               {
                 headers: {
-                  Authorization: `Bearer ${loopedinApiKey}`,
+                  "x-loopedin-key": loopedinApiKey,
                   "Content-Type": "application/json",
                 },
               }
