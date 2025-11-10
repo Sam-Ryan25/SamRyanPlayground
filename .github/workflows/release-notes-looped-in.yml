@@ -39,12 +39,24 @@ jobs:
           const days = parseInt(process.env.DAYS || "30", 10);
           const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
 
-          const workspaceId = process.env.LOOPEDIN_WORKSPACE_ID;
-          const loopedinApiKey = process.env.LOOPEDIN_API_KEY;
+          const workspaceId = process.env.LOOPEDIN_WORKSPACE_ID.trim();
+          const loopedinApiKey = process.env.LOOPEDIN_API_KEY.trim();
 
           async function run() {
-            console.log("📦 Fetching GitHub releases...");
+            // --- Verify API key and workspace first ---
+            try {
+              console.log("🔑 Checking LoopedIn API key and workspace access...");
+              const check = await axios.get(
+                `https://api.loopedin.io/v1/workspaces/${workspaceId}`,
+                { headers: { "x-loopedin-key": loopedinApiKey } }
+              );
+              console.log("✅ Workspace access OK:", check.data.name || "Workspace found");
+            } catch (err) {
+              console.error("❌ Unauthorized or invalid workspace/API key:", err.response?.data || err.message);
+              process.exit(1);
+            }
 
+            console.log("📦 Fetching GitHub releases...");
             const releases = await axios.get(
               "https://api.github.com/repos/${{ github.repository }}/releases",
               { headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } }
