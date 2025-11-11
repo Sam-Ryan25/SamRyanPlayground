@@ -1,0 +1,124 @@
+name: Release notes summary with llm (Zapier)
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: "Number of days back to include releases"
+        required: false
+        default: "30"
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v5
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v6
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: npm install axios openai
+
+      - name: Collect, Clean, and Publish Notes to Zapier
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          ZAPIER_WEBHOOK_URL: ${{ secrets.ZAPIER_WEBHOOK_URL }}
+          DAYS: ${{ github.event.inputs.days }}
+        run: |
+          node <<'EOF'
+          const axios = require('axios');
+          const OpenAI = require('openai');
+
+          const days = parseInt(process.env.DAYS || "30", 10);
+          const cutoff = new Date(Date.now() - days * 24 * 60 * 60 * 1000);
+
+          async function run() {
+            console.log("📦 Fetching GitHub releases...");
+            const releases = await axios.get(
+              "https://api.github.com/repos/${{ github.repository }}/releases",
+              { headers: { Authorization: `token ${process.env.GITHUB_TOKEN}` } }
+            );
+
+            const recent = releases.data.filter(r => new Date(r.published_at) >= cutoff);
+
+            if (!recent.length) {
+              console.log("ℹ️ No recent releases found in timeframe.");
+              return;
+            }
+
+            const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+            let combinedContent = "";
+
+            for (const r of recent) {
+              let content = r.body || "";
+
+              content = content.replace(/## What's Changed/g, '');
+              content = content.replace(/## New Contributors[\s\S]*/g, '');
+              content = content.replace(/Full Changelog:.*$/gm, '');
+              content = content.replace(/ by @\S+/g, '');
+              content = content.replace(/https:\/\/github\.com\/\S+/g, '');
+
+              let lines = content.split('\n').map(l => l.trim()).filter(Boolean);
+              if (!lines.length) continue;
+
+              console.log(`🤖 Sending ${lines.length} bullets to OpenAI for cleanup...`);
+
+              const response = await openai.chat.completions.create({
+                model: "gpt-4o-mini",
+                messages: [
+                  {
+                    role: "system",
+                    content: "You are a marketing assistant rewriting release note bullet points for end users. Keep them concise, friendly, and non-technical. Return one bullet per line, no markdown."
+                  },
+                  { role: "user", content: lines.join("\n") }
+                ],
+                temperature: 0.3,
+                max_tokens: 1000,
+              });
+
+              const cleaned = response.choices[0].message.content
+                .split("\n")
+                .map(l => l.trim())
+                .filter(Boolean);
+
+              const section = `
+                <h2>${r.name || r.tag_name} (${r.published_at.slice(0,10)})</h2>
+                <ul>${cleaned.map(line => `<li>${line}</li>`).join('\n')}</ul>
+              `;
+
+              combinedContent += section + "\n";
+            }
+
+            const title = `Release Notes (Last ${days} Days)`;
+            const zapierWebhook = process.env.ZAPIER_WEBHOOK_URL.trim();
+
+            console.log("🚀 Sending release notes to Zapier Webhook...");
+
+            await axios.post(
+              zapierWebhook,
+              {
+                title,
+                body: combinedContent,
+                days
+              },
+              {
+                headers: {
+                  "Content-Type": "application/json",
+                },
+              }
+            );
+
+            console.log("✅ Release notes sent to Zapier!");
+          }
+
+          run().catch(err => {
+            console.error("❌ Failed:", err.response?.data || err.message || err);
+            process.exit(1);
+          });
+          EOF
