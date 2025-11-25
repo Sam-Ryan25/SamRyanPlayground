@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>My GitHub Page</title>
+</head>
+<body>
+
+  <nav>
+    <a id="link-staging" href="#">Staging</a>
+    <a id="link-live" href="#">Live</a>
+  </nav>
+
+  <h1 id="page-title">Welcome</h1>
+  <p id="page-desc">This page is for testing widgets.</p>
+
+  <script type="module">
+    import Arto from "https://media.arto.chat/arto.js"; // Default import
+
+    // Determine environment from query param, default to live
+    const params = new URLSearchParams(window.location.search);
+    const env = params.get('env') || 'live';
+
+    let uuid, widgetURL, pageTitle, pageDesc;
+
+    if(env === 'staging') {
+      uuid = "43709186-ea51-46e2-ad7c-c936f7ff9715";
+      widgetURL = "https://media-staging.arto.chat/arto.js";
+      pageTitle = "My GitHub Page - Staging";
+      pageDesc = "This page is for testing staging widgets.";
+    } else {
+      uuid = "0df71d27-f867-4aad-87a3-b104a4f4a39b";
+      widgetURL = "https://media.arto.chat/arto.js";
+      pageTitle = "My GitHub Page - Live";
+      pageDesc = "This page is for testing live widgets.";
+    }
+
+    // Update page content
+    document.title = pageTitle;
+    document.getElementById('page-title').innerText = pageTitle;
+    document.getElementById('page-desc').innerText = pageDesc;
+
+    // Update nav links
+    document.getElementById('link-staging').href = "?env=staging";
+    document.getElementById('link-live').href = "?env=live";
+
+    // Dynamically import the correct Arto widget
+    import(widgetURL).then((ArtoModule) => {
+      ArtoModule.default.init({
+        uuid,
+        widgetType: "chat"
+      });
+    });
+  </script>
+
+</body>
+</html>
