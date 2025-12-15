@@ -2,16 +2,56 @@
 <html>
 <head>
   <title>My GitHub Page - Live</title>
+
+  <style>
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+    }
+
+    /* Navigation bar */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 60px;
+      background-color: #222;
+      display: flex;
+      align-items: center;
+      padding: 0 20px;
+      z-index: 3000; /* Higher than 2000 */
+    }
+
+    nav a {
+      color: #ffffff;
+      margin-right: 20px;
+      text-decoration: none;
+      font-weight: bold;
+    }
+
+    nav a:hover {
+      text-decoration: underline;
+    }
+
+    /* Page content spacing */
+    main {
+      padding-top: 80px;
+    }
+  </style>
 </head>
+
 <body>
 
   <nav>
     <a href="staging.html">Staging</a>
-    <a href="live.html"><strong>Live</strong></a>
+    <a href="live.html">Live</a>
   </nav>
 
-  <h1>Live Environment</h1>
-  <p>This page is for testing live widgets.</p>
+  <main>
+    <h1>Live Environment</h1>
+    <p>This page is for testing live widgets.</p>
+  </main>
 
   <script type="module">
     import Arto from "https://media.arto.chat/arto.js";
