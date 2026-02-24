@@ -100,9 +100,17 @@
 <script type="module">
   import Arto from "https://media-staging.arto.chat/arto.js";
 
-  Arto.init({
-    uuid: "987709c4-08ff-4cbf-8a6c-0a916eda75db",
-    searchSelector: "#arto-inline-search"
+  // Wait for the HTML elements to be fully ready
+  document.addEventListener('DOMContentLoaded', () => {
+    try {
+      Arto.init({
+        uuid: "987709c4-08ff-4cbf-8a6c-0a916eda75db",
+        searchSelector: "#arto-inline-search" 
+      });
+      console.log("Arto initialized successfully.");
+    } catch (error) {
+      console.error("Arto failed to load:", error);
+    }
   });
 </script>
   
