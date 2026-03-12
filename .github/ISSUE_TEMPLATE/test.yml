@@ -1,0 +1,53 @@
+name: AI Generated Issue
+description: Fill out this form and AI will generate a polished GitHub issue.
+title: "[AI Issue]: "
+labels: ["ai-generated"]
+
+body:
+  - type: input
+    id: summary
+    attributes:
+      label: Short Summary
+      description: One-line description of the issue
+      placeholder: Login button not working
+    validations:
+      required: true
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem Description
+      description: Explain the issue in detail
+      placeholder: Describe what’s happening and why it’s a problem
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to Reproduce
+      description: Include clear reproducible steps
+      placeholder: |
+        1. Go to login page
+        2. Click login
+        3. Nothing happens
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected Behaviour
+      placeholder: What should happen instead?
+
+  - type: dropdown
+    id: priority
+    attributes:
+      label: Priority
+      options:
+        - Low
+        - Medium
+        - High
+        - Critical
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Additional Information
+      description: Any screenshots, logs, or extra context
