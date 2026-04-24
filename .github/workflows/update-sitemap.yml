@@ -1,0 +1,57 @@
+name: Auto Update Sitemap
+
+# Triggers on every push to the main branch
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  update-sitemap:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Step 1: Check out the repo
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # Step 2: Generate sitemap.xml by scanning all HTML files
+      - name: Generate sitemap.xml
+        run: |
+          BASE_URL="https://Sam-Ryan25.github.io/SamRyanPlayg"
+          TODAY=$(date +%Y-%m-%d)
+
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > sitemap.xml
+          echo '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">' >> sitemap.xml
+
+          # Find all .html files in the repo and add them to the sitemap
+          find . -name "*.html" \
+            -not -path "./.git/*" \
+            | sed 's|^./||' \
+            | sort \
+            | while read file; do
+                # Get the last commit date for this specific file
+                LAST_MOD=$(git log -1 --format="%ai" -- "$file" | cut -d' ' -f1)
+                
+                # Fallback to today if no commit date found
+                if [ -z "$LAST_MOD" ]; then
+                  LAST_MOD=$TODAY
+                fi
+
+                echo "  <url>" >> sitemap.xml
+                echo "    <loc>${BASE_URL}/${file}</loc>" >> sitemap.xml
+                echo "    <lastmod>${LAST_MOD}</lastmod>" >> sitemap.xml
+                echo "    <changefreq>monthly</changefreq>" >> sitemap.xml
+                echo "  </url>" >> sitemap.xml
+              done
+
+          echo '</urlset>' >> sitemap.xml
+
+      # Step 3: Commit the updated sitemap back to the repo
+      - name: Commit updated sitemap
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add sitemap.xml
+          git diff --cached --quiet || git commit -m "chore: auto-update sitemap.xml [skip ci]"
+          git push
