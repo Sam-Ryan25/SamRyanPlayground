@@ -18,7 +18,7 @@ jobs:
       # Step 2: Generate sitemap.xml by scanning all HTML files
       - name: Generate sitemap.xml
         run: |
-          BASE_URL="https://Sam-Ryan25.github.io"
+          BASE_URL="https://Sam-Ryan25.github.io/SamRyanPlayg"
           TODAY=$(date +%Y-%m-%d)
 
           echo '<?xml version="1.0" encoding="UTF-8"?>' > sitemap.xml
