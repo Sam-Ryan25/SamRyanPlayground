@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <!-- Root page - fresh, should NOT trigger re-crawl -->
+  <url>
+    <loc>https://Sam-Ryan25.github.io/SamRyanPlayg/index.html</loc>
+    <lastmod>2026-04-24</lastmod>
+    <changefreq>monthly</changefreq>
+  </url>
+
+  <!-- Staging - stale date, SHOULD trigger re-crawl -->
+  <url>
+    <loc>https://Sam-Ryan25.github.io/SamRyanPlayg/pages/staging.html</loc>
+    <lastmod>2022-01-01</lastmod>
+    <changefreq>monthly</changefreq>
+  </url>
+
+  <!-- Live - fresh date, should NOT trigger re-crawl -->
+  <url>
+    <loc>https://Sam-Ryan25.github.io/SamRyanPlayg/pages/live.html</loc>
+    <lastmod>2026-04-24</lastmod>
+    <changefreq>monthly</changefreq>
+  </url>
+
+  <!-- NHS - borderline/edge case date -->
+  <url>
+    <loc>https://Sam-Ryan25.github.io/SamRyanPlayg/pages/NHS.html</loc>
+    <lastmod>2025-01-15</lastmod>
+    <changefreq>monthly</changefreq>
+  </url>
+
+</urlset>
